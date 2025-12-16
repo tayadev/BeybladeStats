@@ -18,7 +18,7 @@ export default function SeasonPage() {
 
   const season = useQuery(
     api.myFunctions.getSeasonById,
-    id ? { id } : undefined
+    id ? { id } : "skip"
   );
 
   if (season === undefined) {

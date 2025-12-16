@@ -7,6 +7,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { DirectoryPage } from "@/components/directory-page";
 import { EditTournamentDialog } from "@/components/edit-tournament-dialog";
 import { CreateTournamentDialog } from "@/components/create-tournament-dialog";
+import { ImportChallongeDialog } from "@/components/import-challonge-dialog";
 import { Button } from "@/components/ui/button";
 import { Eye } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -78,7 +79,12 @@ export default function TournamentsPage() {
     <DirectoryPage
       title="Tournaments"
       description="Browse all tournaments."
-      createButton={<CreateTournamentDialog />}
+      createButton={
+        <div className="flex gap-2">
+          <CreateTournamentDialog />
+          <ImportChallongeDialog />
+        </div>
+      }
       columns={columns}
       data={items}
       isLoading={tournaments === undefined}

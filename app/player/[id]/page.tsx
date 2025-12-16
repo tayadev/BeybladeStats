@@ -139,22 +139,22 @@ export default function PlayerProfilePage() {
 
   const player = useQuery(
     api.myFunctions.getUserById,
-    id ? { id } : undefined
+    id ? { id } : "skip"
   );
 
   const seasons = useQuery(
     api.myFunctions.getPlayerSeasons,
-    id ? { playerId: id } : undefined
+    id ? { playerId: id } : "skip"
   );
 
   const tournaments = useQuery(
     api.myFunctions.getPlayerTournaments,
-    id ? { playerId: id } : undefined
+    id ? { playerId: id } : "skip"
   );
 
   const matches = useQuery(
     api.myFunctions.getPlayerMatches,
-    id ? { playerId: id } : undefined
+    id ? { playerId: id } : "skip"
   );
 
   if (!validId) {

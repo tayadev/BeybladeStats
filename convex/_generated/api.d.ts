@@ -9,6 +9,7 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as challongeImport from "../challongeImport.js";
 import type * as eloCalculations from "../eloCalculations.js";
 import type * as eloQueries from "../eloQueries.js";
 import type * as eloRecalculation from "../eloRecalculation.js";
@@ -24,6 +25,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  challongeImport: typeof challongeImport;
   eloCalculations: typeof eloCalculations;
   eloQueries: typeof eloQueries;
   eloRecalculation: typeof eloRecalculation;

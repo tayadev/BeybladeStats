@@ -18,7 +18,7 @@ export default function TournamentPage() {
 
   const tournament = useQuery(
     api.myFunctions.getTournamentById,
-    id ? { id } : undefined
+    id ? { id } : "skip"
   );
 
   if (tournament === undefined) {
