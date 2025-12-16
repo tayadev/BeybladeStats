@@ -28,22 +28,27 @@ export default function MatchPage() {
 
   const match = useQuery(
     api.myFunctions.getMatchById,
-    id ? { id } : undefined
+    id ? { id } : "skip"
   );
 
   const winnerUser = useQuery(
     api.myFunctions.getUserById,
-    match?.winner ? { id: match.winner } : undefined
+    match?.winner ? { id: match.winner } : "skip"
   );
 
   const loserUser = useQuery(
     api.myFunctions.getUserById,
-    match?.loser ? { id: match.loser } : undefined
+    match?.loser ? { id: match.loser } : "skip"
   );
 
   const tournament = useQuery(
     api.myFunctions.getTournamentById,
-    match?.tournament ? { id: match.tournament } : undefined
+    match?.tournament ? { id: match.tournament } : "skip"
+  );
+
+  const eloChanges = useQuery(
+    api.eloQueries.getMatchEloChanges,
+    id ? { matchId: id } : "skip"
   );
 
   if (match === undefined) {
@@ -98,6 +103,16 @@ export default function MatchPage() {
                   {winnerUser?.name ?? "Loading..."}
                 </p>
               </Link>
+              {eloChanges && (
+                <div className="mt-2 space-y-1">
+                  <p className="text-sm text-muted-foreground">
+                    ELO: {Math.round(eloChanges.winner.previousElo)} → {Math.round(eloChanges.winner.newElo)}
+                  </p>
+                  <p className="text-sm font-semibold text-emerald-600">
+                    +{Math.round(eloChanges.winner.change)}
+                  </p>
+                </div>
+              )}
             </div>
             <div className="px-6 text-center">
               <p className="text-sm text-muted-foreground">vs</p>
@@ -109,6 +124,16 @@ export default function MatchPage() {
                   {loserUser?.name ?? "Loading..."}
                 </p>
               </Link>
+              {eloChanges && (
+                <div className="mt-2 space-y-1">
+                  <p className="text-sm text-muted-foreground">
+                    ELO: {Math.round(eloChanges.loser.previousElo)} → {Math.round(eloChanges.loser.newElo)}
+                  </p>
+                  <p className="text-sm font-semibold text-rose-600">
+                    {Math.round(eloChanges.loser.change)}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

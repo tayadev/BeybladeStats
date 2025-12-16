@@ -175,3 +175,74 @@ export const getPlayerSeasonStats = query({
     };
   },
 });
+
+export const getMatchEloChanges = query({
+  args: {
+    matchId: v.id("matches"),
+  },
+  handler: async (ctx, args) => {
+    const match = await ctx.db.get(args.matchId);
+    if (!match) return null;
+
+    const snapshots = await ctx.db
+      .query("eloSnapshots")
+      .withIndex("by_match", (q) => q.eq("matchId", args.matchId))
+      .collect();
+
+    if (snapshots.length === 0) return null;
+
+    const winnerSnapshot = snapshots.find((s) => s.playerId === match.winner);
+    const loserSnapshot = snapshots.find((s) => s.playerId === match.loser);
+
+    if (!winnerSnapshot || !loserSnapshot) return null;
+
+    const seasons = await ctx.db.query("seasons").collect();
+    const season = seasons.find(
+      (s) => !s.deleted && match.date >= s.start && match.date <= s.end
+    );
+
+    if (!season) return null;
+
+    const winnerPrevSnapshots = await ctx.db
+      .query("eloSnapshots")
+      .withIndex("by_player_season", (q) =>
+        q.eq("playerId", match.winner).eq("seasonId", season._id)
+      )
+      .filter((q) => q.lt(q.field("timestamp"), match.date))
+      .collect();
+
+    const loserPrevSnapshots = await ctx.db
+      .query("eloSnapshots")
+      .withIndex("by_player_season", (q) =>
+        q.eq("playerId", match.loser).eq("seasonId", season._id)
+      )
+      .filter((q) => q.lt(q.field("timestamp"), match.date))
+      .collect();
+
+    const winnerPrevElo =
+      winnerPrevSnapshots.length > 0
+        ? winnerPrevSnapshots[winnerPrevSnapshots.length - 1].elo
+        : 100;
+    const loserPrevElo =
+      loserPrevSnapshots.length > 0
+        ? loserPrevSnapshots[loserPrevSnapshots.length - 1].elo
+        : 100;
+
+    return {
+      winner: {
+        playerId: match.winner,
+        previousElo: winnerPrevElo,
+        newElo: winnerSnapshot.elo,
+        change: winnerSnapshot.elo - winnerPrevElo,
+        pointsGained: winnerSnapshot.calculationMetadata.pointsGained,
+      },
+      loser: {
+        playerId: match.loser,
+        previousElo: loserPrevElo,
+        newElo: loserSnapshot.elo,
+        change: loserSnapshot.elo - loserPrevElo,
+        pointsLost: loserSnapshot.calculationMetadata.pointsLost,
+      },
+    };
+  },
+});
