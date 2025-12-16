@@ -180,6 +180,118 @@ export const getTournamentById = query({
   },
 });
 
+// Get matches for a tournament
+export const getTournamentMatches = query({
+  args: { tournamentId: v.id("tournaments") },
+  returns: v.array(
+    v.object({
+      _id: v.id("matches"),
+      _creationTime: v.number(),
+      date: v.number(),
+      tournament: v.optional(v.id("tournaments")),
+      winner: v.id("users"),
+      winnerName: v.string(),
+      loser: v.id("users"),
+      loserName: v.string(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const matches = await ctx.db
+      .query("matches")
+      .withIndex("by_tournament", (q) => q.eq("tournament", args.tournamentId))
+      .collect();
+
+    const filtered = matches.filter((m) => !m.deleted);
+
+    // Fetch player names for each match
+    return await Promise.all(
+      filtered.map(async (match) => {
+        const winner = await ctx.db.get(match.winner);
+        const loser = await ctx.db.get(match.loser);
+        return {
+          _id: match._id,
+          _creationTime: match._creationTime,
+          date: match.date,
+          tournament: match.tournament,
+          winner: match.winner,
+          winnerName: winner?.name || "Unknown",
+          loser: match.loser,
+          loserName: loser?.name || "Unknown",
+        };
+      })
+    );
+  },
+});
+
+// Get all participants in a tournament
+export const getTournamentParticipants = query({
+  args: { tournamentId: v.id("tournaments") },
+  returns: v.array(
+    v.object({
+      _id: v.id("users"),
+      name: v.string(),
+      wins: v.number(),
+      losses: v.number(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const matches = await ctx.db
+      .query("matches")
+      .withIndex("by_tournament", (q) => q.eq("tournament", args.tournamentId))
+      .collect();
+
+    const filtered = matches.filter((m) => !m.deleted);
+
+    // Get unique participants and their record
+    const participantMap = new Map<
+      string,
+      { userId: Id<"users">; name: string; wins: number; losses: number }
+    >();
+
+    for (const match of filtered) {
+      const winner = await ctx.db.get(match.winner);
+      const loser = await ctx.db.get(match.loser);
+
+      const winnerId = match.winner;
+      const loserId = match.loser;
+
+      if (!participantMap.has(winnerId)) {
+        participantMap.set(winnerId, {
+          userId: winnerId,
+          name: winner?.name || "Unknown",
+          wins: 0,
+          losses: 0,
+        });
+      }
+      const winnerRecord = participantMap.get(winnerId)!;
+      winnerRecord.wins += 1;
+
+      if (!participantMap.has(loserId)) {
+        participantMap.set(loserId, {
+          userId: loserId,
+          name: loser?.name || "Unknown",
+          wins: 0,
+          losses: 0,
+        });
+      }
+      const loserRecord = participantMap.get(loserId)!;
+      loserRecord.losses += 1;
+    }
+
+    // Convert to array and sort by wins descending
+    const participants = Array.from(participantMap.values())
+      .map((p) => ({
+        _id: p.userId,
+        name: p.name,
+        wins: p.wins,
+        losses: p.losses,
+      }))
+      .sort((a, b) => b.wins - a.wins);
+
+    return participants;
+  },
+});
+
 // List all matches
 export const listMatches = query({
   args: {},
