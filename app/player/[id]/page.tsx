@@ -7,6 +7,48 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { Header } from "@/components/header";
 import Link from "next/link";
 
+function SeasonWithElo({ season, playerId }: { season: any; playerId: Id<"users"> }) {
+  const eloData = useQuery(api.eloQueries.getPlayerCurrentElo, {
+    playerId,
+    seasonId: season._id,
+  });
+
+  return (
+    <Link
+      key={season._id}
+      href={`/season/${season._id}`}
+      className="block p-3 rounded border border-border hover:bg-muted transition-colors"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-medium text-foreground">{season.name}</p>
+          <p className="text-sm text-muted-foreground">
+            {new Date(season.start).toLocaleDateString()} -{" "}
+            {new Date(season.end).toLocaleDateString()}
+          </p>
+        </div>
+        <div className="text-right">
+          {eloData === undefined ? (
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          ) : eloData === null ? (
+            <p className="text-sm text-muted-foreground">No ELO</p>
+          ) : (
+            <div>
+              <p className="text-lg font-bold text-foreground">
+                {Math.round(eloData.currentElo)}
+              </p>
+              <p className="text-xs text-muted-foreground">ELO</p>
+              {eloData.isInactive && (
+                <p className="text-xs text-amber-600">Inactive</p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 export default function PlayerProfilePage() {
   const params = useParams<{ id: string }>();
   const idParam = (params?.id ?? "") as string;
@@ -109,17 +151,7 @@ export default function PlayerProfilePage() {
           ) : (
             <div className="grid gap-2">
               {seasons.map((season) => (
-                <Link
-                  key={season._id}
-                  href={`/season/${season._id}`}
-                  className="block p-3 rounded border border-border hover:bg-muted transition-colors"
-                >
-                  <p className="font-medium text-foreground">{season.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(season.start).toLocaleDateString()} -{" "}
-                    {new Date(season.end).toLocaleDateString()}
-                  </p>
-                </Link>
+                <SeasonWithElo key={season._id} season={season} playerId={id!} />
               ))}
             </div>
           )}

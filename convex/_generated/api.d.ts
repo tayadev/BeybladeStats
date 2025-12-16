@@ -9,7 +9,11 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as eloCalculations from "../eloCalculations.js";
+import type * as eloQueries from "../eloQueries.js";
+import type * as eloRecalculation from "../eloRecalculation.js";
 import type * as http from "../http.js";
+import type * as migrations_initializeElo from "../migrations/initializeElo.js";
 import type * as myFunctions from "../myFunctions.js";
 
 import type {
@@ -20,7 +24,11 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  eloCalculations: typeof eloCalculations;
+  eloQueries: typeof eloQueries;
+  eloRecalculation: typeof eloRecalculation;
   http: typeof http;
+  "migrations/initializeElo": typeof migrations_initializeElo;
   myFunctions: typeof myFunctions;
 }>;
 

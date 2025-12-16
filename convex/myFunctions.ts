@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { internal } from "./_generated/api";
 
 // Write your Convex functions in any file inside this directory (`convex`).
 // See https://docs.convex.dev/functions for more.
@@ -448,18 +449,32 @@ export const createMatch = mutation({
     if (!userId) {
       throw new Error("Must be authenticated to create a match");
     }
-    
+
     const user = await ctx.db.get(userId);
     if (!user || user.role !== "judge") {
       throw new Error("Only judges can create matches");
     }
-    
-    return await ctx.db.insert("matches", {
+
+    const matchId = await ctx.db.insert("matches", {
       date: args.date,
       tournament: args.tournament,
       winner: args.winner,
       loser: args.loser,
     });
+
+    const seasons = await ctx.db.query("seasons").collect();
+    const affectedSeason = seasons.find(
+      (s) => !s.deleted && args.date >= s.start && args.date <= s.end
+    );
+
+    if (affectedSeason) {
+      await ctx.scheduler.runAfter(0, internal.eloRecalculation.recalculateSeasonElo, {
+        seasonId: affectedSeason._id,
+        fromTimestamp: args.date,
+      });
+    }
+
+    return matchId;
   },
 });
 
@@ -526,17 +541,45 @@ export const updateTournament = mutation({
     if (!userId) {
       throw new Error("Must be authenticated to update a tournament");
     }
-    
+
     const user = await ctx.db.get(userId);
     if (!user || user.role !== "judge") {
       throw new Error("Only judges can update tournaments");
     }
-    
+
+    const oldTournament = await ctx.db.get(args.id);
+    if (!oldTournament) {
+      throw new Error("Tournament not found");
+    }
+
     await ctx.db.patch(args.id, {
       name: args.name,
       date: args.date,
       winner: args.winner,
     });
+
+    const seasons = await ctx.db.query("seasons").collect();
+    const oldSeason = seasons.find(
+      (s) => !s.deleted && oldTournament.date >= s.start && oldTournament.date <= s.end
+    );
+    const newSeason = seasons.find(
+      (s) => !s.deleted && args.date >= s.start && args.date <= s.end
+    );
+
+    if (oldSeason && oldSeason._id !== newSeason?._id) {
+      await ctx.scheduler.runAfter(0, internal.eloRecalculation.recalculateSeasonElo, {
+        seasonId: oldSeason._id,
+        fromTimestamp: oldTournament.date,
+      });
+    }
+
+    if (newSeason) {
+      await ctx.scheduler.runAfter(0, internal.eloRecalculation.recalculateSeasonElo, {
+        seasonId: newSeason._id,
+        fromTimestamp: args.date,
+      });
+    }
+
     return null;
   },
 });
@@ -550,13 +593,31 @@ export const deleteTournament = mutation({
     if (!userId) {
       throw new Error("Must be authenticated to delete a tournament");
     }
-    
+
     const user = await ctx.db.get(userId);
     if (!user || user.role !== "judge") {
       throw new Error("Only judges can delete tournaments");
     }
-    
+
+    const tournament = await ctx.db.get(args.id);
+    if (!tournament) {
+      throw new Error("Tournament not found");
+    }
+
     await ctx.db.patch(args.id, { deleted: true });
+
+    const seasons = await ctx.db.query("seasons").collect();
+    const affectedSeason = seasons.find(
+      (s) => !s.deleted && tournament.date >= s.start && tournament.date <= s.end
+    );
+
+    if (affectedSeason) {
+      await ctx.scheduler.runAfter(0, internal.eloRecalculation.recalculateSeasonElo, {
+        seasonId: affectedSeason._id,
+        fromTimestamp: tournament.date,
+      });
+    }
+
     return null;
   },
 });
@@ -576,18 +637,46 @@ export const updateMatch = mutation({
     if (!userId) {
       throw new Error("Must be authenticated to update a match");
     }
-    
+
     const user = await ctx.db.get(userId);
     if (!user || user.role !== "judge") {
       throw new Error("Only judges can update matches");
     }
-    
+
+    const oldMatch = await ctx.db.get(args.id);
+    if (!oldMatch) {
+      throw new Error("Match not found");
+    }
+
     await ctx.db.patch(args.id, {
       date: args.date,
       tournament: args.tournament,
       winner: args.winner,
       loser: args.loser,
     });
+
+    const seasons = await ctx.db.query("seasons").collect();
+    const oldSeason = seasons.find(
+      (s) => !s.deleted && oldMatch.date >= s.start && oldMatch.date <= s.end
+    );
+    const newSeason = seasons.find(
+      (s) => !s.deleted && args.date >= s.start && args.date <= s.end
+    );
+
+    if (oldSeason && oldSeason._id !== newSeason?._id) {
+      await ctx.scheduler.runAfter(0, internal.eloRecalculation.recalculateSeasonElo, {
+        seasonId: oldSeason._id,
+        fromTimestamp: oldMatch.date,
+      });
+    }
+
+    if (newSeason) {
+      await ctx.scheduler.runAfter(0, internal.eloRecalculation.recalculateSeasonElo, {
+        seasonId: newSeason._id,
+        fromTimestamp: args.date,
+      });
+    }
+
     return null;
   },
 });
@@ -601,13 +690,31 @@ export const deleteMatch = mutation({
     if (!userId) {
       throw new Error("Must be authenticated to delete a match");
     }
-    
+
     const user = await ctx.db.get(userId);
     if (!user || user.role !== "judge") {
       throw new Error("Only judges can delete matches");
     }
-    
+
+    const match = await ctx.db.get(args.id);
+    if (!match) {
+      throw new Error("Match not found");
+    }
+
     await ctx.db.patch(args.id, { deleted: true });
+
+    const seasons = await ctx.db.query("seasons").collect();
+    const affectedSeason = seasons.find(
+      (s) => !s.deleted && match.date >= s.start && match.date <= s.end
+    );
+
+    if (affectedSeason) {
+      await ctx.scheduler.runAfter(0, internal.eloRecalculation.recalculateSeasonElo, {
+        seasonId: affectedSeason._id,
+        fromTimestamp: match.date,
+      });
+    }
+
     return null;
   },
 });
