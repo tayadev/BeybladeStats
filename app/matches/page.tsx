@@ -75,10 +75,16 @@ const columns: ColumnDef<MatchItem, unknown>[] = [
 export default function MatchesPage() {
   const matches = useQuery(api.myFunctions.listMatches);
   const players = useQuery(api.myFunctions.listPlayers);
+  const tournaments = useQuery(api.myFunctions.listTournaments);
 
   // Create a map of player IDs to names
   const playerMap = new Map(
     (players ?? []).map((p) => [p._id, p.name])
+  );
+
+  // Create a map of tournament IDs to names
+  const tournamentMap = new Map(
+    (tournaments ?? []).map((t) => [t._id, t.name])
   );
 
   const items: MatchItem[] = (matches ?? []).map((m) => ({
@@ -89,7 +95,7 @@ export default function MatchesPage() {
     rawWinner: m.winner,
     rawLoser: m.loser,
     date: formatDateTime(m.date),
-    tournament: m.tournament as unknown as string,
+    tournament: m.tournament ? (tournamentMap.get(m.tournament) || "Unknown") : "-",
     winner: playerMap.get(m.winner) || "Unknown",
     loser: playerMap.get(m.loser) || "Unknown",
   }));
@@ -101,7 +107,7 @@ export default function MatchesPage() {
       createButton={<CreateMatchDialog />}
       columns={columns}
       data={items}
-      isLoading={matches === undefined || players === undefined}
+      isLoading={matches === undefined || players === undefined || tournaments === undefined}
       loadingLabel="Loading matches…"
     />
   );
