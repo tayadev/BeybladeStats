@@ -20,6 +20,13 @@ export default function AboutPage() {
             Add a description about the project here
           </p>
         </section>
+        
+        <section className="rounded-lg border bg-card p-6 shadow-sm">
+          <h2 className="text-2xl font-semibold mb-3">Contact</h2>
+          <p className="text-muted-foreground leading-relaxed">
+            This app is developed by Taya. For inquiries or feedback, please reach out at <a href="mailto:taya@taya.net?subject=BLG" className="underline hover:text-foreground">taya@taya.net</a>.
+          </p>
+        </section>
       </main>
     </>
   );
