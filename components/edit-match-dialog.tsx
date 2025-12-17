@@ -29,8 +29,8 @@ export function EditMatchDialog({ match, onMatchUpdated }: EditMatchDialogProps)
     return null;
   }
 
-  const tournamentOptions = [{ label: "No Tournament", value: "none" }, ...(tournaments ?? []).map((t) => ({ label: t.name, value: String(t._id) }))];
-  const playerOptions = (players ?? []).map((p) => ({ label: p.name, value: String(p._id) }));
+  const tournamentOptions = [{ label: "No Tournament", value: "none" }, ...(tournaments ?? []).map((t: any) => ({ label: t.name, value: String(t._id) }))];
+  const playerOptions = (players ?? []).map((p: any) => ({ label: p.name, value: String(p._id) }));
 
   const toLocalInputValue = (ms: number) => {
     const d = new Date(ms);

@@ -3,7 +3,7 @@
 
 - check mobile responsiveness
 - add a way to upgrade from a non claimed account to a claimed account
-- add a way for judges to merge duplicate player accounts
+- add a way for judges to merge duplicate player accounts (only for non-claimed accounts)
 
 - data tables dont use full width
 - pagination becomes silly large with many pages (we should only shows a few page number buttons at a time)

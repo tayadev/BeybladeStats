@@ -66,7 +66,7 @@ const columns: ColumnDef<TournamentItem, unknown>[] = [
 export default function TournamentsPage() {
   const tournaments = useQuery(api.myFunctions.listTournaments);
 
-  const items: TournamentItem[] = (tournaments ?? []).map((t) => ({
+  const items: TournamentItem[] = (tournaments ?? []).map((t: any) => ({
     id: t._id as unknown as string,
     rawId: t._id,
     rawDate: t.date,

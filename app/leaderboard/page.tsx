@@ -33,7 +33,7 @@ export default function LeaderboardPage() {
     selectedSeasonId ? { seasonId: selectedSeasonId } : "skip"
   );
 
-  const selectedSeason = allSeasons?.find((s) => s._id === selectedSeasonId);
+  const selectedSeason = allSeasons?.find((s: any) => s._id === selectedSeasonId);
 
   return (
     <>
@@ -54,7 +54,7 @@ export default function LeaderboardPage() {
                   <SelectValue placeholder="Select a season" />
                 </SelectTrigger>
                 <SelectContent>
-                  {allSeasons.map((season) => (
+                  {allSeasons.map((season: any) => (
                     <SelectItem key={season._id} value={season._id}>
                       {season.name}
                       {season._id === currentSeason?._id && " (Current)"}

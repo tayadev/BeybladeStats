@@ -79,15 +79,15 @@ export default function MatchesPage() {
 
   // Create a map of player IDs to names
   const playerMap = new Map(
-    (players ?? []).map((p) => [p._id, p.name])
+    (players ?? []).map((p: any) => [p._id, p.name])
   );
 
   // Create a map of tournament IDs to names
   const tournamentMap = new Map(
-    (tournaments ?? []).map((t) => [t._id, t.name])
+    (tournaments ?? []).map((t: any) => [t._id, t.name])
   );
 
-  const items: MatchItem[] = (matches ?? []).map((m) => ({
+  const items: MatchItem[] = (matches ?? []).map((m: any) => ({
     id: m._id as unknown as string,
     rawId: m._id,
     rawDate: m.date,

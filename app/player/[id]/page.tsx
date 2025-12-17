@@ -62,7 +62,7 @@ function EloProgressionChart({ season, playerId }: { season: any; playerId: Id<"
     return null;
   }
 
-  const chartData = eloHistory.map((snapshot, index) => ({
+  const chartData = eloHistory.map((snapshot: any, index: number) => ({
     index: index + 1,
     date: new Date(snapshot.timestamp).toLocaleDateString(),
     elo: Math.round(snapshot.elo),
@@ -224,7 +224,7 @@ export default function PlayerProfilePage() {
           <section className="space-y-4">
             <h2 className="text-xl font-semibold">ELO Progression</h2>
             <div className="space-y-4">
-              {seasons.map((season) => (
+              {seasons.map((season: any) => (
                 <EloProgressionChart key={season._id} season={season} playerId={id!} />
               ))}
             </div>
@@ -239,7 +239,7 @@ export default function PlayerProfilePage() {
             <p className="text-muted-foreground">No seasons found.</p>
           ) : (
             <div className="grid gap-2">
-              {seasons.map((season) => (
+              {seasons.map((season: any) => (
                 <SeasonWithElo key={season._id} season={season} playerId={id!} />
               ))}
             </div>
@@ -254,7 +254,7 @@ export default function PlayerProfilePage() {
             <p className="text-muted-foreground">No tournaments found.</p>
           ) : (
             <div className="grid gap-2">
-              {tournaments.map((tournament) => (
+              {tournaments.map((tournament: any) => (
                 <Link
                   key={tournament._id}
                   href={`/tournament/${tournament._id}`}
@@ -278,7 +278,7 @@ export default function PlayerProfilePage() {
             <p className="text-muted-foreground">No matches found.</p>
           ) : (
             <div className="space-y-2 max-h-96 overflow-y-auto">
-              {matches.map((match) => {
+              {matches.map((match: any) => {
                 const opponentName = match.opponentName ?? "Unknown opponent";
                 const resultLabel = match.playerWon ? "Win" : "Loss";
                 const opponent = match.opponentId ? (

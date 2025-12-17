@@ -12,6 +12,7 @@ export default defineSchema({
     name: v.string(),
     email: v.optional(v.string()),
     image: v.optional(v.string()),
+    deleted: v.optional(v.boolean()),
   }),
   seasons: defineTable({
     name: v.string(),

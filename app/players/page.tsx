@@ -5,6 +5,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 
 import { DirectoryPage } from "@/components/directory-page";
 import { CreatePlayerDialog } from "@/components/create-player-dialog";
+import { MergeAccountsDialog } from "@/components/merge-accounts-dialog";
 import { Button } from "@/components/ui/button";
 import { Eye } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -73,7 +74,7 @@ const columns: ColumnDef<PlayerItem, any>[] = [
 export default function PlayersDirectoryPage() {
   const players = useQuery(api.myFunctions.listPlayers);
 
-  const items: PlayerItem[] = (players ?? []).map((p) => ({
+  const items: PlayerItem[] = (players ?? []).map((p: any) => ({
     id: p._id as unknown as string,
     name: p.name,
     role: p.role,
@@ -85,7 +86,12 @@ export default function PlayersDirectoryPage() {
     <DirectoryPage
       title="Players"
       description="Browse all registered players."
-      createButton={<CreatePlayerDialog />}
+      createButton={
+        <div className="flex gap-2">
+          <CreatePlayerDialog />
+          <MergeAccountsDialog />
+        </div>
+      }
       columns={columns}
       data={items}
       isLoading={players === undefined}

@@ -17,7 +17,7 @@ export function CreateTournamentDialog() {
     return null;
   }
 
-  const winnerItems: ComboboxItem[] = (players ?? []).map((p) => ({ value: p._id, label: p.name }));
+  const winnerItems: ComboboxItem[] = (players ?? []).map((p: any) => ({ value: p._id, label: p.name }));
 
   return (
     <EntityDialog

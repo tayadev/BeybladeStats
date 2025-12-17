@@ -70,7 +70,7 @@ const columns: ColumnDef<SeasonItem, unknown>[] = [
 export default function SeasonsPage() {
   const seasons = useQuery(api.myFunctions.listSeasons);
 
-  const items: SeasonItem[] = (seasons ?? []).map((s) => ({
+  const items: SeasonItem[] = (seasons ?? []).map((s: any) => ({
     id: s._id as unknown as string,
     rawId: s._id,
     rawStart: s.start,

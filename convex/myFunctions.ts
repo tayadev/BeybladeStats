@@ -66,12 +66,13 @@ export const listPlayers = query({
   ),
   handler: async (ctx) => {
     const players = await ctx.db.query("users").order("desc").collect();
+    const filteredPlayers = players.filter(p => !p.deleted);
 
     // Preload auth accounts to avoid N+1 lookups; auth tables come from authTables schema.
     const accounts = await ctx.db.query("authAccounts").collect();
     const accountByUserId = new Set(accounts.map((a) => a.userId));
 
-    return players.map((p) => ({
+    return filteredPlayers.map((p) => ({
       _id: p._id,
       _creationTime: p._creationTime,
       role: p.role,
@@ -828,5 +829,283 @@ export const deleteMatch = mutation({
     }
 
     return null;
+  },
+});
+
+// Get a preview of merging two user accounts
+export const getMergePreview = mutation({
+  args: {
+    sourceUserId: v.id("users"),
+    targetUserId: v.id("users"),
+  },
+  returns: v.object({
+    source: v.object({
+      _id: v.id("users"),
+      name: v.string(),
+      role: v.union(v.literal("player"), v.literal("judge")),
+    }),
+    target: v.object({
+      _id: v.id("users"),
+      name: v.string(),
+      role: v.union(v.literal("player"), v.literal("judge")),
+      hasAccount: v.boolean(),
+    }),
+    counts: v.object({
+      matchesAsWinner: v.number(),
+      matchesAsLoser: v.number(),
+      tournamentWins: v.number(),
+      eloSnapshots: v.number(),
+    }),
+    affectedSeasonIds: v.array(v.id("seasons")),
+  }),
+  handler: async (ctx, args) => {
+    // Validate judge authentication
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Must be authenticated to merge accounts");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "judge") {
+      throw new Error("Only judges can merge accounts");
+    }
+
+    // Validate source and target exist
+    const source = await ctx.db.get(args.sourceUserId);
+    if (!source || source.deleted) {
+      throw new Error("Source account not found or has been deleted");
+    }
+
+    const target = await ctx.db.get(args.targetUserId);
+    if (!target || target.deleted) {
+      throw new Error("Target account not found or has been deleted");
+    }
+
+    // Check they're not the same
+    if (args.sourceUserId === args.targetUserId) {
+      throw new Error("Cannot merge an account into itself");
+    }
+
+    // Verify source is non-claimed (no auth account)
+    const authAccounts = await ctx.db.query("authAccounts").collect();
+    const sourceAuthAccount = authAccounts.find(a => a.userId === args.sourceUserId);
+    if (sourceAuthAccount) {
+      throw new Error("Source account is claimed and cannot be merged. Only non-claimed accounts can be merged.");
+    }
+
+    // Check for conflicts: matches where source and target played each other
+    const allMatches = await ctx.db.query("matches").collect();
+    const conflictMatches = allMatches.filter(m =>
+      !m.deleted && (
+        (m.winner === args.sourceUserId && m.loser === args.targetUserId) ||
+        (m.winner === args.targetUserId && m.loser === args.sourceUserId)
+      )
+    );
+
+    if (conflictMatches.length > 0) {
+      throw new Error(
+        `Cannot merge: these accounts have played ${conflictMatches.length} match${conflictMatches.length > 1 ? 'es' : ''} against each other`
+      );
+    }
+
+    // Count related data
+    const matchesAsWinner = await ctx.db
+      .query("matches")
+      .withIndex("by_winner", (q) => q.eq("winner", args.sourceUserId))
+      .collect();
+    const matchesAsWinnerCount = matchesAsWinner.filter(m => !m.deleted).length;
+
+    const matchesAsLoser = await ctx.db
+      .query("matches")
+      .withIndex("by_loser", (q) => q.eq("loser", args.sourceUserId))
+      .collect();
+    const matchesAsLoserCount = matchesAsLoser.filter(m => !m.deleted).length;
+
+    const tournaments = await ctx.db.query("tournaments").collect();
+    const tournamentWinsCount = tournaments.filter(t => !t.deleted && t.winner === args.sourceUserId).length;
+
+    const eloSnapshots = await ctx.db.query("eloSnapshots").collect();
+    const eloSnapshotsCount = eloSnapshots.filter(e => e.playerId === args.sourceUserId).length;
+
+    // Find affected seasons
+    const seasons = await ctx.db.query("seasons").collect();
+    const allSourceMatches = [...matchesAsWinner, ...matchesAsLoser].filter(m => !m.deleted);
+    const affectedSeasonIds = seasons
+      .filter(s => !s.deleted && allSourceMatches.some(m => m.date >= s.start && m.date <= s.end))
+      .map(s => s._id);
+
+    // Check if target has auth account
+    const targetAuthAccount = authAccounts.find(a => a.userId === args.targetUserId);
+
+    return {
+      source: {
+        _id: source._id,
+        name: source.name,
+        role: source.role,
+      },
+      target: {
+        _id: target._id,
+        name: target.name,
+        role: target.role,
+        hasAccount: !!targetAuthAccount,
+      },
+      counts: {
+        matchesAsWinner: matchesAsWinnerCount,
+        matchesAsLoser: matchesAsLoserCount,
+        tournamentWins: tournamentWinsCount,
+        eloSnapshots: eloSnapshotsCount,
+      },
+      affectedSeasonIds,
+    };
+  },
+});
+
+// Public mutation to merge user accounts
+export const mergeUserAccounts = mutation({
+  args: {
+    sourceUserId: v.id("users"),
+    targetUserId: v.id("users"),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    stats: v.object({
+      matchesUpdated: v.number(),
+      tournamentsUpdated: v.number(),
+      eloSnapshotsUpdated: v.number(),
+    }),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    // Validate judge authentication
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Must be authenticated to merge accounts");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "judge") {
+      throw new Error("Only judges can merge accounts");
+    }
+
+    // Re-validate accounts exist and meet requirements
+    const source = await ctx.db.get(args.sourceUserId);
+    if (!source || source.deleted) {
+      throw new Error("Source account not found or has been deleted");
+    }
+
+    const target = await ctx.db.get(args.targetUserId);
+    if (!target || target.deleted) {
+      throw new Error("Target account not found or has been deleted");
+    }
+
+    if (args.sourceUserId === args.targetUserId) {
+      throw new Error("Cannot merge an account into itself");
+    }
+
+    // Verify source is non-claimed
+    const authAccounts = await ctx.db.query("authAccounts").collect();
+    const sourceAuthAccount = authAccounts.find(a => a.userId === args.sourceUserId);
+    if (sourceAuthAccount) {
+      throw new Error("Source account is claimed and cannot be merged. Only non-claimed accounts can be merged.");
+    }
+
+    // Check for conflicts
+    const allMatches = await ctx.db.query("matches").collect();
+    const conflictMatches = allMatches.filter(m =>
+      !m.deleted && (
+        (m.winner === args.sourceUserId && m.loser === args.targetUserId) ||
+        (m.winner === args.targetUserId && m.loser === args.sourceUserId)
+      )
+    );
+
+    if (conflictMatches.length > 0) {
+      throw new Error(
+        `Cannot merge: these accounts have played ${conflictMatches.length} match${conflictMatches.length > 1 ? 'es' : ''} against each other`
+      );
+    }
+
+    // Perform the merge - inline to avoid circular reference
+    let matchesUpdated = 0;
+    let tournamentsUpdated = 0;
+    let eloSnapshotsUpdated = 0;
+
+    // Update matches where source is winner
+    const matchesAsWinner = await ctx.db
+      .query("matches")
+      .withIndex("by_winner", (q) => q.eq("winner", args.sourceUserId))
+      .collect();
+
+    for (const match of matchesAsWinner) {
+      await ctx.db.patch(match._id, { winner: args.targetUserId });
+      matchesUpdated++;
+    }
+
+    // Update matches where source is loser
+    const matchesAsLoser = await ctx.db
+      .query("matches")
+      .withIndex("by_loser", (q) => q.eq("loser", args.sourceUserId))
+      .collect();
+
+    for (const match of matchesAsLoser) {
+      await ctx.db.patch(match._id, { loser: args.targetUserId });
+      matchesUpdated++;
+    }
+
+    // Update tournaments where source is winner
+    const tournaments = await ctx.db.query("tournaments").collect();
+    const sourceTournaments = tournaments.filter(t => t.winner === args.sourceUserId);
+
+    for (const tournament of sourceTournaments) {
+      await ctx.db.patch(tournament._id, { winner: args.targetUserId });
+      tournamentsUpdated++;
+    }
+
+    // Update ELO snapshots
+    const eloSnapshots = await ctx.db.query("eloSnapshots").collect();
+    const sourceEloSnapshots = eloSnapshots.filter(e => e.playerId === args.sourceUserId);
+
+    for (const snapshot of sourceEloSnapshots) {
+      await ctx.db.patch(snapshot._id, { playerId: args.targetUserId });
+      eloSnapshotsUpdated++;
+    }
+
+    // Soft delete source user
+    await ctx.db.patch(args.sourceUserId, { deleted: true });
+
+    const stats = {
+      matchesUpdated,
+      tournamentsUpdated,
+      eloSnapshotsUpdated,
+    };
+
+    // Identify affected seasons and trigger ELO recalculation
+    const seasons = await ctx.db.query("seasons").collect();
+    const targetMatches = await ctx.db.query("matches").collect();
+    const relevantMatches = targetMatches.filter(m =>
+      !m.deleted && (m.winner === args.targetUserId || m.loser === args.targetUserId)
+    );
+
+    const affectedSeasons = seasons.filter(s =>
+      !s.deleted && relevantMatches.some(m => m.date >= s.start && m.date <= s.end)
+    );
+
+    for (const season of affectedSeasons) {
+      const seasonMatches = relevantMatches.filter(m => m.date >= season.start && m.date <= season.end);
+      const earliestMatch = seasonMatches.reduce((earliest, m) =>
+        m.date < earliest ? m.date : earliest,
+        seasonMatches[0]?.date || season.start
+      );
+
+      await ctx.scheduler.runAfter(0, internal.eloRecalculation.recalculateSeasonElo, {
+        seasonId: season._id,
+        fromTimestamp: earliestMatch,
+      });
+    }
+
+    return {
+      success: true,
+      stats,
+      message: `Successfully merged ${source.name} into ${target.name}. ELO recalculation scheduled for ${affectedSeasons.length} season(s).`,
+    };
   },
 });

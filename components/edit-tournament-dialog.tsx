@@ -27,7 +27,7 @@ export function EditTournamentDialog({ tournament, onTournamentUpdated }: EditTo
     return null;
   }
 
-  const winnerItems = (players ?? []).map((p) => ({ label: p.name, value: String(p._id) }));
+  const winnerItems = (players ?? []).map((p: any) => ({ label: p.name, value: String(p._id) }));
   const toLocalInputValue = (ms: number) => {
     const d = new Date(ms);
     const pad = (n: number) => String(n).padStart(2, "0");

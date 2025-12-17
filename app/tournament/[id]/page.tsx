@@ -74,10 +74,10 @@ export default function TournamentPage() {
   }
 
   const playerMap = new Map(
-    (players ?? []).map((p) => [p._id, p.name])
+    (players ?? []).map((p: any) => [p._id, p.name])
   );
 
-  const winnerName = playerMap.get(tournament.winner) || "Unknown";
+  const winnerName = (playerMap.get(tournament.winner) as string) || "Unknown";
 
   return (
     <>
@@ -102,7 +102,7 @@ export default function TournamentPage() {
             <p className="text-muted-foreground">No participants in this tournament.</p>
           ) : (
             <div className="space-y-2">
-              {participants.map((participant, index) => (
+              {participants.map((participant: any, index: number) => (
                 <div
                   key={participant._id}
                   className="flex items-center justify-between p-3 rounded border border-border bg-muted/30 hover:bg-muted/50 transition-colors"
@@ -137,7 +137,7 @@ export default function TournamentPage() {
             <p className="text-muted-foreground">No matches recorded for this tournament.</p>
           ) : (
             <div className="space-y-3">
-              {matches.map((match) => (
+              {matches.map((match: any) => (
                 <div
                   key={match._id}
                   className="flex items-center justify-between p-3 rounded border border-border bg-muted/30 hover:bg-muted/50 transition-colors"
