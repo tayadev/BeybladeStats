@@ -1,6 +1,9 @@
 import { Metadata } from "next";
 import PlayerClient from "./PlayerClient";
 
+// Force dynamic rendering so metadata can fetch from Convex at request time
+export const dynamic = 'force-dynamic';
+
 type Props = {
   params: Promise<{ id: string }>;
 };
