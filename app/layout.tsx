@@ -16,10 +16,55 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BLG Beyblade Stats",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
+  ),
+  title: {
+    default: "BLG Beyblade Stats",
+    template: "%s | BLG Beyblade Stats",
+  },
   description: "Track rankings, matches, and tournament results for Bladers League Gaming",
+  keywords: [
+    "beyblade",
+    "stats",
+    "rankings",
+    "tournaments",
+    "ELO",
+    "leaderboard",
+    "BLG",
+    "Bladers League Gaming",
+  ],
   icons: {
     icon: "/blg.svg",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: "BLG Beyblade Stats",
+    title: "BLG Beyblade Stats",
+    description: "Track rankings, matches, and tournament results for Bladers League Gaming",
+    images: [
+      {
+        url: "/og-default.png",
+        width: 1200,
+        height: 630,
+        alt: "BLG Beyblade Stats",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "BLG Beyblade Stats",
+    description: "Track rankings, matches, and tournament results for Bladers League Gaming",
+    images: ["/og-default.png"],
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 

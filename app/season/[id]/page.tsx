@@ -1,84 +1,95 @@
-"use client";
+import { Metadata } from "next";
+import SeasonClient from "./SeasonClient";
 
-import { useParams } from "next/navigation";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
-import { Header } from "@/components/header";
+type Props = {
+  params: Promise<{ id: string }>;
+};
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const convexUrl = process.env.CONVEX_URL || process.env.NEXT_PUBLIC_CONVEX_URL;
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+
+  // Validate ID format
+  const isPlausibleConvexId = (s: string) => /^[a-z0-9]{10,}$/i.test(s);
+  if (!isPlausibleConvexId(id)) {
+    return {
+      title: "Invalid Season ID",
+      description: "The season ID provided is invalid.",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+
+  try {
+    // Fetch season data from HTTP API
+    const response = await fetch(`${convexUrl}/api/season/${id}`, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      next: { revalidate: 60 }, // Cache for 60 seconds
+    });
+
+    if (!response.ok) {
+      return {
+        title: "Season Not Found",
+        description: "The season you're looking for doesn't exist.",
+        robots: {
+          index: false,
+          follow: false,
+        },
+      };
+    }
+
+    const season = await response.json();
+
+    const startDate = new Date(season.start).toLocaleDateString();
+    const endDate = new Date(season.end).toLocaleDateString();
+    const title = season.name;
+    const description = `${startDate} - ${endDate}. View leaderboard and tournaments.`;
+    const ogImageUrl = `${baseUrl}/api/og/season/${id}`;
+
+    return {
+      title,
+      description,
+      openGraph: {
+        type: "website",
+        title,
+        description,
+        url: `${baseUrl}/season/${id}`,
+        siteName: "BLG Beyblade Stats",
+        images: [
+          {
+            url: ogImageUrl,
+            width: 1200,
+            height: 630,
+            alt: `${season.name} - BLG Beyblade Stats`,
+          },
+        ],
+        locale: "en_US",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+        images: [ogImageUrl],
+      },
+    };
+  } catch (error) {
+    console.error("Error generating metadata:", error);
+    return {
+      title: "Season",
+      description: "View season details and leaderboard.",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+}
 
 export default function SeasonPage() {
-  const params = useParams<{ id: string }>();
-  const idParam = (params?.id ?? "") as string;
-
-  const isPlausibleConvexId = (s: string) => /^[a-z0-9]{10,}$/i.test(s);
-  const validId = isPlausibleConvexId(idParam);
-  const id = (validId ? (idParam as Id<"seasons">) : undefined) as
-    | Id<"seasons">
-    | undefined;
-
-  const season = useQuery(
-    api.myFunctions.getSeasonById,
-    id ? { id } : "skip"
-  );
-
-  if (season === undefined) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-lg text-muted-foreground">Loading...</p>
-      </div>
-    );
-  }
-
-  if (!validId) {
-    return (
-      <>
-        <Header />
-        <main className="p-8 flex flex-col gap-8 max-w-3xl mx-auto">
-          <div className="rounded-lg border bg-card p-6 shadow-sm">
-            <h1 className="text-2xl font-semibold mb-2">Invalid season id</h1>
-            <p className="text-muted-foreground">Please check the URL and try again.</p>
-          </div>
-        </main>
-      </>
-    );
-  }
-
-  if (season === null) {
-    return (
-      <>
-        <Header />
-        <main className="p-8 flex flex-col gap-8 max-w-3xl mx-auto">
-          <div className="rounded-lg border bg-card p-6 shadow-sm">
-            <h1 className="text-2xl font-semibold mb-2">Season not found</h1>
-            <p className="text-muted-foreground">We couldn't find that season.</p>
-          </div>
-        </main>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <Header />
-      <main className="p-8 flex flex-col gap-8 max-w-3xl mx-auto">
-        <div className="rounded-lg border bg-card p-6 shadow-sm">
-          <h1 className="text-3xl font-bold text-foreground">{season.name}</h1>
-          <p className="text-sm text-muted-foreground mt-2">
-            {new Date(season.start).toLocaleDateString()} -{" "}
-            {new Date(season.end).toLocaleDateString()}
-          </p>
-        </div>
-
-        <section className="rounded-lg border bg-card p-6 shadow-sm">
-          <h2 className="text-xl font-semibold mb-2">Tournaments</h2>
-          <p className="text-muted-foreground">Coming soon.</p>
-        </section>
-
-        <section className="rounded-lg border bg-card p-6 shadow-sm">
-          <h2 className="text-xl font-semibold mb-2">Matches</h2>
-          <p className="text-muted-foreground">Coming soon.</p>
-        </section>
-      </main>
-    </>
-  );
+  return <SeasonClient />;
 }
