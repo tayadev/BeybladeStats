@@ -17,7 +17,7 @@ import {
 import { ShieldCheck, AlertTriangle } from "lucide-react";
 
 interface PromoteToJudgeDialogProps {
-  playerId: string;
+  playerId: Id<"users">;
   playerName: string;
 }
 
@@ -32,7 +32,7 @@ export function PromoteToJudgeDialog({ playerId, playerName }: PromoteToJudgeDia
     setError("");
 
     try {
-      await promoteToJudge({ playerId: playerId as Id<"users"> });
+      await promoteToJudge({ playerId });
       setOpen(false);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Failed to promote player";
