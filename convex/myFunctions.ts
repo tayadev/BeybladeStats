@@ -1110,3 +1110,38 @@ export const mergeUserAccounts = mutation({
     };
   },
 });
+
+// Promote a player to judge (for judges)
+export const promoteToJudge = mutation({
+  args: {
+    playerId: v.id("users"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Must be authenticated to promote players");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "judge") {
+      throw new Error("Only judges can promote players to judges");
+    }
+
+    const player = await ctx.db.get(args.playerId);
+    if (!player) {
+      throw new Error("Player not found");
+    }
+
+    if (player.deleted) {
+      throw new Error("Cannot promote a deleted player");
+    }
+
+    if (player.role === "judge") {
+      throw new Error("Player is already a judge");
+    }
+
+    await ctx.db.patch(args.playerId, { role: "judge" });
+    return null;
+  },
+});

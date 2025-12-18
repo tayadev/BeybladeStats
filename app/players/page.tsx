@@ -6,6 +6,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { DirectoryPage } from "@/components/directory-page";
 import { CreatePlayerDialog } from "@/components/create-player-dialog";
 import { MergeAccountsDialog } from "@/components/merge-accounts-dialog";
+import { PromoteToJudgeDialog } from "@/components/promote-to-judge-dialog";
 import { Button } from "@/components/ui/button";
 import { Eye } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -73,6 +74,7 @@ const columns: ColumnDef<PlayerItem, any>[] = [
 
 export default function PlayersDirectoryPage() {
   const players = useQuery(api.myFunctions.listPlayers);
+  const currentUser = useQuery(api.myFunctions.getCurrentUser);
 
   const items: PlayerItem[] = (players ?? []).map((p: any) => ({
     id: p._id as unknown as string,
@@ -81,6 +83,32 @@ export default function PlayersDirectoryPage() {
     created: formatDate(p._creationTime),
     hasAccount: p.hasAccount,
   }));
+
+  // Create columns with access to currentUser for conditional rendering
+  const columnsWithActions: ColumnDef<PlayerItem, any>[] = [
+    ...columns.slice(0, -1), // All columns except the actions column
+    {
+      id: "actions",
+      header: "",
+      cell: ({ row }) => (
+        <div className="text-right flex justify-end gap-2">
+          {currentUser?.role === "judge" && row.original.role === "player" && (
+            <PromoteToJudgeDialog
+              playerId={row.original.id}
+              playerName={row.original.name}
+            />
+          )}
+          <Link href={`/player/${row.original.id}`}>
+            <Button variant="ghost" size="sm" className="gap-2">
+              <Eye className="h-4 w-4" /> View
+            </Button>
+          </Link>
+        </div>
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+  ];
 
   return (
     <DirectoryPage
@@ -92,7 +120,7 @@ export default function PlayersDirectoryPage() {
           <MergeAccountsDialog />
         </div>
       }
-      columns={columns}
+      columns={columnsWithActions}
       data={items}
       isLoading={players === undefined}
       loadingLabel="Loading players…"
