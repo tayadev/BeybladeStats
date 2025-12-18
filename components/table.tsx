@@ -73,10 +73,10 @@ export default function DataTable<TData, TValue>({
   // Generate page numbers to display
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
-    const maxVisiblePages = 5; // Show at most 5 page numbers
     const delta = 2; // Show 2 pages on each side of current page
+    const maxVisiblePages = 7; // Maximum pages before using ellipsis (includes first, last, and ellipsis)
 
-    if (pageCount <= maxVisiblePages + 2) {
+    if (pageCount <= maxVisiblePages) {
       // If total pages is small, show all pages
       return Array.from({ length: pageCount }, (_, i) => i + 1);
     }
