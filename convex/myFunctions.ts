@@ -1111,7 +1111,7 @@ export const mergeUserAccounts = mutation({
   },
 });
 
-// Promote a player to judge (for judges)
+// Promotes a player to judge role (judges only)
 export const promoteToJudge = mutation({
   args: {
     playerId: v.id("users"),

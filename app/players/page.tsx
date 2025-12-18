@@ -77,7 +77,7 @@ export default function PlayersDirectoryPage() {
       id: "actions",
       header: "",
       cell: ({ row }) => (
-        <div className="text-right flex justify-end gap-2">
+        <div className="flex justify-end gap-2">
           {currentUser?.role === "judge" && row.original.role === "player" && (
             <PromoteToJudgeDialog
               playerId={row.original.id}
